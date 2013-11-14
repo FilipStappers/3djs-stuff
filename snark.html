@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 5000,
+    height = 5000;
+
+var color = d3.scale.category20();
+function mapNodes(nodes){
+	var nodeMap = [];
+	for(var i=0; i<nodes.length; i++){
+		nodeMap[nodes[i].name] = i;
+	}
+	return nodeMap;
+}
+function getQuerystring(key, default_)
+{
+  if (default_==null) default_=""; 
+  key = key.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regex = new RegExp("[\\?&]"+key+"=([^&#]*)");
+  var qs = regex.exec(window.location.href);
+  if(qs == null)
+    return default_;
+  else
+    return qs[1];
+}
+
+function snark(q) {
+	var nodes = [];
+	for(var i=1;i<=q;i++){
+		nodes.push({ name: "t" + i, group:1});
+		nodes.push({ name: "u" + i, group:2});
+		nodes.push({ name: "v" + i, group:3});
+		nodes.push({ name: "w" + i, group:4});
+	}	
+	var nodeMap = mapNodes(nodes);
+	var links = [];
+	for(var i=1;i<=q;i++){
+		links.push({"source": nodeMap["t" + i], "target": nodeMap["t" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["t" + i], "target": nodeMap["u" + i], "value":1});
+		links.push({"source": nodeMap["u" + i], "target": nodeMap["v" + i], "value":1});
+		links.push({"source": nodeMap["u" + i], "target": nodeMap["w" + i], "value":1});
+		links.push({"source": nodeMap["v" + i], "target": nodeMap["w" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["w" + i], "target": nodeMap["v" + (i%q+1)], "value":1});
+	}
+	return {"nodes": nodes, "links": links};
+}
+var graph = snark(getQuerystring('q'));
+
+var force = d3.layout.force()
+    .charge(-120)
+    .linkDistance(30)
+    .size([width, height]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.json("miserables.json", function(error, graph2) {
+  force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+    .enter().append("line")
+      .attr("class", "link")
+      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+    .enter().append("circle")
+      .attr("class", "node")
+      .attr("r", 5)
+      .style("fill", function(d) { return color(d.group); })
+      .call(force.drag);
+
+  node.append("title")
+      .text(function(d) { return d.name; });
+
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+  });
+});
+
+</script>
+
