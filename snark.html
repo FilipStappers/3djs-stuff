@@ -16,9 +16,11 @@
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
-
-var width = 5000,
-    height = 5000;
+    /*
+    This code draws the "flower snark" graph, for a given querystring parameter q, as described in Don Knuth's TAOCP pre-fascicle 6a, exercise 560.
+    The nodes are named and colored using the coloring explained in that exercise.
+    The code is largely based on the 3djs sample 'Force-Directed graphs'. 
+    */
 
 var color = d3.scale.category20();
 function mapNodes(nodes){
@@ -39,14 +41,64 @@ function getQuerystring(key, default_)
   else
     return qs[1];
 }
-
+function coloring(q, name, i){
+    if(q%2 == 0){
+        if(i%2 == 0){
+            switch(name){
+                case "t": return 1;
+                case "u": return 2;
+                case "v": return 1;
+                case "w": return 1;
+                case "a": return 1;
+                case "b": return 2;
+                case "c": return 1;
+                case "d": return 3;
+                case "e": return 2;
+                case "f": return 1;
+            }
+        }
+        else{
+            switch(name){
+                case "t": return 2;
+                case "u": return 1;
+                case "v": return 2;
+                case "w": return 2;
+                case "a": return 3;
+                case "b": return 2;
+                case "c": return 3;
+                case "d": return 1;
+                case "e": return 2;
+                case "f": return 3;
+            }
+        }
+    }
+    //TODO:coloring not ok yet for q=odd
+            switch(name){
+                case "t": return 1;
+                case "u": return 2;
+                case "v": return 3;
+                case "w": return 4;
+                case "a": return 1;
+                case "b": return 1;
+                case "c": return 1;
+                case "d": return 1;
+                case "e": return 1;
+                case "f": return 1;
+            }
+}
 function snark(q) {
 	var nodes = [];
 	for(var i=1;i<=q;i++){
-		nodes.push({ name: "t" + i, group:1});
-		nodes.push({ name: "u" + i, group:2});
-		nodes.push({ name: "v" + i, group:3});
-		nodes.push({ name: "w" + i, group:4});
+		nodes.push({ name: "t" + i, group:coloring(q,"t",i)});
+		nodes.push({ name: "u" + i, group:coloring(q,"u",i)});
+		nodes.push({ name: "v" + i, group:coloring(q,"v",i)});
+		nodes.push({ name: "w" + i, group:coloring(q,"w",i)});
+		nodes.push({ name: "a" + i, group:coloring(q,"a",i)});
+		nodes.push({ name: "b" + i, group:coloring(q,"b",i)});
+		nodes.push({ name: "c" + i, group:coloring(q,"c",i)});
+		nodes.push({ name: "d" + i, group:coloring(q,"d",i)});
+		nodes.push({ name: "e" + i, group:coloring(q,"e",i)});
+		nodes.push({ name: "f" + i, group:coloring(q,"f",i)});
 	}	
 	var nodeMap = mapNodes(nodes);
 	var links = [];
@@ -57,10 +109,25 @@ function snark(q) {
 		links.push({"source": nodeMap["u" + i], "target": nodeMap["w" + i], "value":1});
 		links.push({"source": nodeMap["v" + i], "target": nodeMap["w" + (i%q+1)], "value":1});
 		links.push({"source": nodeMap["w" + i], "target": nodeMap["v" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["a" + i], "target": nodeMap["a" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["a" + i], "target": nodeMap["b" + i], "value":1});
+		links.push({"source": nodeMap["a" + i], "target": nodeMap["b" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["b" + i], "target": nodeMap["c" + i], "value":1});
+		links.push({"source": nodeMap["b" + i], "target": nodeMap["d" + i], "value":1});
+		links.push({"source": nodeMap["c" + i], "target": nodeMap["d" + i], "value":1});
+		links.push({"source": nodeMap["c" + i], "target": nodeMap["e" + i], "value":1});
+		links.push({"source": nodeMap["d" + i], "target": nodeMap["f" + i], "value":1});
+		links.push({"source": nodeMap["e" + i], "target": nodeMap["d" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["e" + i], "target": nodeMap["f" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["f" + i], "target": nodeMap["c" + (i%q+1)], "value":1});
+		links.push({"source": nodeMap["f" + i], "target": nodeMap["e" + (i%q+1)], "value":1});
 	}
 	return {"nodes": nodes, "links": links};
 }
-var graph = snark(getQuerystring('q'));
+var q = getQuerystring('q', 5);
+var width = 10000,
+    height = 10000;
+var graph = snark(q);
 
 var force = d3.layout.force()
     .charge(-120)
@@ -71,7 +138,6 @@ var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height);
 
-d3.json("miserables.json", function(error, graph2) {
   force
       .nodes(graph.nodes)
       .links(graph.links)
@@ -93,7 +159,7 @@ d3.json("miserables.json", function(error, graph2) {
 
   node.append("title")
       .text(function(d) { return d.name; });
-
+  //TODO: add test label
   force.on("tick", function() {
     link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
@@ -103,7 +169,6 @@ d3.json("miserables.json", function(error, graph2) {
     node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; });
   });
-});
 
 </script>
 
