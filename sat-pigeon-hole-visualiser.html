@@ -46,7 +46,34 @@ function getQuerystring(key, default_)
 function nodeName(x,i,j){
     return x + "_" + i + "," + j;
 }
-function pigeonclauses_cooccurrence(m) {
+function pigeonclauses_cooccurrence_variables(m) {
+	var nodes = [];
+	for(var i=0;i<=m;i++){
+        for(var j=1;j<=m;j++){
+    		nodes.push({ name: nodeName("x",i,j), group: j});
+        }
+	}	
+	var nodeMap = mapNodes(nodes);
+	var links = [];
+    //Equation 97
+	for(var i=0;i<=m;i++){
+        for(j=1; j<=m;j++){
+            for(k=j+1;k<=m;k++){
+                links.push({"source": nodeMap[nodeName("x",i,j)], target: nodeMap[nodeName("x",i,k)], "value":1});
+            }
+        }
+	}
+    //Equation 98
+	for(var i=0;i<=m;i++){
+        for(j=i+1; j<=m;j++){
+            for(k=1;k<=m;k++){
+                links.push({"source": nodeMap[nodeName("x",i, k)], target: nodeMap[nodeName("x",j,k)], "value":2});
+            }
+        }
+	}
+	return {"nodes": nodes, "links": links};
+}
+function pigeonclauses_cooccurrence_literals(m) {
 	var nodes = [];
 	for(var i=0;i<=m;i++){
         for(var j=1;j<=m;j++){
@@ -77,11 +104,11 @@ function pigeonclauses_cooccurrence(m) {
 var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
-var graph = pigeonclauses_cooccurrence(m);
+var graph = pigeonclauses_cooccurrence_variables(m);
 
 var force = d3.layout.force()
     .charge(-120)
-    .linkDistance(30)
+    .linkDistance(130)
     .size([width, height]);
 
 var svg = d3.select("body").append("svg")
