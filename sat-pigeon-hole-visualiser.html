@@ -20,6 +20,12 @@
     I'm experimenting with the visualisation capabilities of 3d.js. One idea would be to implement several visualisations of the pigeon hole SAT proble defined in pre-fascicle 6a of Knuth (eq. 97-98), based on ideas of Slater (http://users.cecs.anu.edu.au/~andrews/problem2graph/node1.html).
     As a first attempt, I'll visualize the cooccurrence of variables graph.
     More complicated graphs, or visualizations similar to DPVis will be explored later.
+    Next up:
+    - Implement more visualisations from Slater's paper
+    - Implement Sinz visualisations
+    - Implement increased attraction of selected node
+    - Implement SAT solver
+    - Implement better popups for each node (# links, SAT algorithm info...)
 
     The code is largely based on the 3djs sample 'Force-Directed graphs'. 
     */
@@ -38,6 +44,49 @@ function getQuerystring(key, default_)
 }
 function nodeName(x,i,j){
     return x + "_" + i + "," + j;
+}
+function rivest(){
+    var clauses = [];
+    clauses.push([{name:"1"},{name:"2"},{name:"~3"}]);
+    clauses.push([{name:"2"},{name:"3"},{name:"~4"}]);
+    clauses.push([{name:"3"},{name:"4"},{name:"1"}]);
+    clauses.push([{name:"4"},{name:"~1"},{name:"2"}]);
+    clauses.push([{name:"~1"},{name:"~2"},{name:"3"}]);
+    clauses.push([{name:"~2"},{name:"~3"},{name:"4"}]);
+    clauses.push([{name:"~3"},{name:"~4"},{name:"~1"}]);
+    clauses.push([{name:"~4"},{name:"1"},{name:"~2"}]);
+    return clauses;
+}
+//Another graph to visualize: Knuth Pre-fascicle 6a, equations 90-92.
+function unsatifiable90_92(m){
+    var clauses = [];
+    //90
+    for(var j=1;j<=m;j++) {
+        var clause = [];
+        clause.push({name: nodeName("x",j,j), group:2});}
+        clauses.push(clause);
+    //91
+    for(var i=1;i<=m;i++){
+        for(var j=1;j<=m;j++){
+            for(var k=1;k<=m;k++){
+                var clause = [];
+                clause.push({name: nodeName("~x",i,j)});
+                clause.push({name: nodeName("~x",j,k)});
+                clause.push({name: nodeName("x",i,k)});
+                clauses.push(clause);
+            }
+            
+        }
+    }
+    //92
+    for(var j=1;j<=m;j++){
+        var clause = [];
+        for(var k=1;k<=m;k++){
+            clause.push({name: nodeName("x",j,k)});
+        }
+        clauses.push(clause);
+    }
+    return clauses;
 }
 function pigeon_clauses(m){
     var clauses = [];
@@ -68,11 +117,11 @@ function var_name(literal){
     }
     return literal.name;
 }
-function pigeonclauses_cooccurrence_variables(m) {
+
+function cooccurrence_variables(clauses) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
-    var clauses = pigeon_clauses(m);
     clauses.forEach(function(element,index,array){
         for(var i=0;i<element.length;i++){
             for(var j=i+1; j<element.length;j++){
@@ -92,11 +141,10 @@ function pigeonclauses_cooccurrence_variables(m) {
     
 	return {"nodes": nodes, "links": links};
 }
-function pigeonclauses_cooccurrence_literals(m) {
+function cooccurrence_literals(clauses) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
-    var clauses = pigeon_clauses(m);
     clauses.forEach(function(element,index,array){
         for(var i=0;i<element.length;i++){
             for(var j=i+1; j<element.length;j++){
@@ -120,7 +168,7 @@ var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
     //TODO: generalize this, so that multiple graph can be generated within the same page
-var graph = pigeonclauses_cooccurrence_literals(m);
+var graph = cooccurrence_literals(rivest());
 
 var force = d3.layout.force()
     .charge(-180)
