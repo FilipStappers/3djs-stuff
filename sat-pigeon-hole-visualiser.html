@@ -25,13 +25,6 @@
     */
 
 var color = d3.scale.category20();
-function mapNodes(nodes){
-	var nodeMap = [];
-	for(var i=0; i<nodes.length; i++){
-		nodeMap[nodes[i].name] = i;
-	}
-	return nodeMap;
-}
 function getQuerystring(key, default_)
 {
   if (default_==null) default_=""; 
@@ -46,68 +39,91 @@ function getQuerystring(key, default_)
 function nodeName(x,i,j){
     return x + "_" + i + "," + j;
 }
-function pigeonclauses_cooccurrence_variables(m) {
-	var nodes = [];
-	for(var i=0;i<=m;i++){
-        for(var j=1;j<=m;j++){
-    		nodes.push({ name: nodeName("x",i,j), group: j});
-        }
-	}	
-	var nodeMap = mapNodes(nodes);
-	var links = [];
+function pigeon_clauses(m){
+    var clauses = [];
     //Equation 97
-	for(var i=0;i<=m;i++){
-        for(j=1; j<=m;j++){
-            for(k=j+1;k<=m;k++){
-                links.push({"source": nodeMap[nodeName("x",i,j)], target: nodeMap[nodeName("x",i,k)], "value":1});
-            }
+    for(var j=0;j<=m;j++){
+        var clause = [];
+        for(var k=1;k<=m;k++){
+            clause.push( {name: nodeName("x",j,k), group: k});
         }
-	}
+        clauses.push(clause);
+    }
     //Equation 98
 	for(var i=0;i<=m;i++){
         for(j=i+1; j<=m;j++){
             for(k=1;k<=m;k++){
-                links.push({"source": nodeMap[nodeName("x",i, k)], target: nodeMap[nodeName("x",j,k)], "value":2});
+                var clause = [];
+                clause.push({name: nodeName("~x",i, k), group: k});
+                clause.push({name: nodeName("~x",j, k), group: k});
+                clauses.push(clause);
             }
         }
 	}
+    return clauses;
+}
+function var_name(literal){
+    if(literal.name.indexOf("~") == 0){
+        return literal.name.substr(1);
+    }
+    return literal.name;
+}
+function pigeonclauses_cooccurrence_variables(m) {
+    var nodeMap = [];
+	var nodes = [];
+    var links = [];
+    var clauses = pigeon_clauses(m);
+    clauses.forEach(function(element,index,array){
+        for(var i=0;i<element.length;i++){
+            for(var j=i+1; j<element.length;j++){
+                var source;
+                if(!nodeMap[var_name(element[i])]){ 
+                    nodes.push(nodeMap[var_name(element[i])] = element[i])}
+                source = nodeMap[var_name(element[i])];
+                
+                var target;
+                if(!nodeMap[var_name(element[j])]){ 
+                    nodes.push(nodeMap[var_name(element[j])] = element[j])}
+                target = nodeMap[var_name(element[j])];
+                links.push({"source": source, "target": target});
+            }
+        }
+    });    
+    
 	return {"nodes": nodes, "links": links};
 }
 function pigeonclauses_cooccurrence_literals(m) {
+    var nodeMap = [];
 	var nodes = [];
-	for(var i=0;i<=m;i++){
-        for(var j=1;j<=m;j++){
-    		nodes.push({ name: nodeName("x",i,j)});
-    		nodes.push({ name: nodeName("~x",i,j) });
-        }
-	}	
-	var nodeMap = mapNodes(nodes);
-	var links = [];
-    //Equation 97
-	for(var i=0;i<=m;i++){
-        for(j=1; j<=m;j++){
-            for(k=j+1;k<=m;k++){
-                links.push({"source": nodeMap[nodeName("x",i,j)], target: nodeMap[nodeName("x",i,k)], "value":1});
+    var links = [];
+    var clauses = pigeon_clauses(m);
+    clauses.forEach(function(element,index,array){
+        for(var i=0;i<element.length;i++){
+            for(var j=i+1; j<element.length;j++){
+                var source;
+                if(!nodeMap[element[i].name]){ 
+                    nodes.push(nodeMap[element[i].name] = element[i])}
+                source = nodeMap[element[i].name];
+                
+                var target;
+                if(!nodeMap[element[j].name]){ 
+                    nodes.push(nodeMap[element[j].name] = element[j])}
+                target = nodeMap[element[j].name];
+                links.push({"source": source, "target": target});
             }
         }
-	}
-    //Equation 98
-	for(var i=0;i<=m;i++){
-        for(j=i+1; j<=m;j++){
-            for(k=1;k<=m;k++){
-                links.push({"source": nodeMap[nodeName("~x",i, k)], target: nodeMap[nodeName("~x",j,k)], "value":1});
-            }
-        }
-	}
+    });    
+    
 	return {"nodes": nodes, "links": links};
 }
 var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
-var graph = pigeonclauses_cooccurrence_variables(m);
+    //TODO: generalize this, so that multiple graph can be generated within the same page
+var graph = pigeonclauses_cooccurrence_literals(m);
 
 var force = d3.layout.force()
-    .charge(-120)
+    .charge(-180)
     .linkDistance(130)
     .size([width, height]);
 
