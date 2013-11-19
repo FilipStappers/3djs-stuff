@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+    /*
+    I'm experimenting with the visualisation capabilities of 3d.js. One idea would be to implement several visualisations of the pigeon hole SAT proble defined in pre-fascicle 6a of Knuth (eq. 97-98), based on ideas of Slater (http://users.cecs.anu.edu.au/~andrews/problem2graph/node1.html).
+    As a first attempt, I'll visualize the cooccurrence of variables graph.
+    More complicated graphs, or visualizations similar to DPVis will be explored later.
+
+    The code is largely based on the 3djs sample 'Force-Directed graphs'. 
+    */
+
+var color = d3.scale.category20();
+function mapNodes(nodes){
+	var nodeMap = [];
+	for(var i=0; i<nodes.length; i++){
+		nodeMap[nodes[i].name] = i;
+	}
+	return nodeMap;
+}
+function getQuerystring(key, default_)
+{
+  if (default_==null) default_=""; 
+  key = key.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regex = new RegExp("[\\?&]"+key+"=([^&#]*)");
+  var qs = regex.exec(window.location.href);
+  if(qs == null)
+    return default_;
+  else
+    return qs[1];
+}
+function nodeName(x,i,j){
+    return x + "_" + i + "," + j;
+}
+function pigeonclauses_cooccurrence(m) {
+	var nodes = [];
+	for(var i=0;i<=m;i++){
+        for(var j=1;j<=m;j++){
+    		nodes.push({ name: nodeName("x",i,j)});
+    		nodes.push({ name: nodeName("~x",i,j) });
+        }
+	}	
+	var nodeMap = mapNodes(nodes);
+	var links = [];
+    //Equation 97
+	for(var i=0;i<=m;i++){
+        for(j=1; j<=m;j++){
+            for(k=j+1;k<=m;k++){
+                links.push({"source": nodeMap[nodeName("x",i,j)], target: nodeMap[nodeName("x",i,k)], "value":1});
+            }
+        }
+	}
+    //Equation 98
+	for(var i=0;i<=m;i++){
+        for(j=i+1; j<=m;j++){
+            for(k=1;k<=m;k++){
+                links.push({"source": nodeMap[nodeName("~x",i, k)], target: nodeMap[nodeName("~x",j,k)], "value":1});
+            }
+        }
+	}
+	return {"nodes": nodes, "links": links};
+}
+var m = getQuerystring('m', 5);
+var width = 1000,
+    height = 1000;
+var graph = pigeonclauses_cooccurrence(m);
+
+var force = d3.layout.force()
+    .charge(-120)
+    .linkDistance(30)
+    .size([width, height]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+    .enter().append("line")
+      .attr("class", "link")
+      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+    .enter().append("circle")
+      .attr("class", "node")
+      .attr("r", 5)
+      .style("fill", function(d) { return color(d.group); })
+      .call(force.drag);
+
+  node.append("title")
+      .text(function(d) { return d.name; });
+  //TODO: add test label
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+  });
+
+</script>
+
