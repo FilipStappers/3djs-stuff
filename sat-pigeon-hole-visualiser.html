@@ -11,6 +11,10 @@
   stroke: #999;
   stroke-opacity: .6;
 }
+svg
+{
+	background: darkgreen;
+}
 
 </style>
 <body>
@@ -43,7 +47,7 @@ function getQuerystring(key, default_)
     return qs[1];
 }
 function nodeName(x,i,j){
-    return x + "_" + i + "," + j;
+    return x + i + "," + j;
 }
 function rivest(){
     var clauses = [];
@@ -118,7 +122,7 @@ function var_name(literal){
     return literal.name;
 }
 
-function cooccurrence_variables(clauses) {
+function cooccurrence_variables_graph(clauses) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
@@ -141,7 +145,8 @@ function cooccurrence_variables(clauses) {
     
 	return {"nodes": nodes, "links": links};
 }
-function cooccurrence_literals(clauses) {
+
+function cooccurrence_literals_graph(clauses) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
@@ -164,11 +169,51 @@ function cooccurrence_literals(clauses) {
     
 	return {"nodes": nodes, "links": links};
 }
+function complement(literal){
+    return literal.name.indexOf("~") == 0 ? literal.name.substr(1) : "~" + literal.name;
+}
+function printclause(clause){
+    var result = "";
+    clause.forEach(function(literal, i, array){
+        result += literal.name + " ";
+    });
+    return result.substr(0, result.length -1);
+}
+function valid_resolutions_graph(clauses){
+    var nodeMap = [];
+    var nodes = [];
+    var links = [];
+    //TODO: rewrite this with contains/filter etc...
+    for(var i=0;i<clauses.length;i++){
+        for(var j=i+1; j<clauses.length;j++){
+            //Check if a resolution is possible by comparing all variables, until a match is found
+            clauses[i].forEach(function(literal, index, array){
+                var complemented = complement(literal);
+                for(var k=0;k<clauses[j].length; k++){
+                    if(clauses[j][k].name == complemented){
+                        var source;
+                        if(!nodeMap[printclause(clauses[i])]){ 
+                            nodes.push(nodeMap[printclause(clauses[i])] = {name: printclause(clauses[i])})}
+                        source = nodeMap[printclause(clauses[i])];
+
+                        var target;
+                        if(!nodeMap[printclause(clauses[j])]){ 
+                            nodes.push(nodeMap[printclause(clauses[j])] = {name: printclause(clauses[j])})}
+                        target = nodeMap[printclause(clauses[j])];
+                        links.push({"source": source, "target": target});
+                        break;
+                    }
+                }
+            });
+        }
+    }
+	return {"nodes": nodes, "links": links};
+}
 var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
     //TODO: generalize this, so that multiple graph can be generated within the same page
-var graph = cooccurrence_literals(pigeon_clauses(m));
+var graph = valid_resolutions_graph(unsatifiable90_92(m));
 
 var force = d3.layout.force()
     .charge(-180)
@@ -197,7 +242,7 @@ var svg = d3.select("body").append("svg")
       .call(force.drag);
 
 node.append("circle")
-      .attr("r", 25)
+      .attr("r", 5)
       .style("fill", function(d) { return color(d.group); });
 node.append("text")
 				.attr("text-anchor", "middle") 
