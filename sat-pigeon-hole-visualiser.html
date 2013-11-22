@@ -92,6 +92,38 @@ function unsatifiable90_92(m){
     }
     return clauses;
 }
+//Knuth also defined a variation of these clauses in exercise 666; replacing clauses (91) with (91')
+function unsatifiable90_92_variation_666(m){
+    var clauses = [];
+    //90
+    for(var j=1;j<=m;j++) {
+        var clause = [];
+        clause.push({name: nodeName("x",j,j), group:2});}
+        clauses.push(clause);
+    //91
+    for(var k=1;k<=m;k++){
+        for(var i=1;i<=k;i++){
+        for(var j=1;j<k;j++){
+                var clause = [];
+                clause.push({name: nodeName("~x",i,j)});
+                clause.push({name: nodeName("~x",j,k)});
+                clause.push({name: nodeName("x",i,k)});
+                clauses.push(clause);
+            }
+            
+        }
+    }
+    //92
+    for(var j=1;j<=m;j++){
+        var clause = [];
+        for(var k=1;k<=m;k++){
+            clause.push({name: nodeName("x",j,k)});
+        }
+        clauses.push(clause);
+    }
+    return clauses;
+}
+
 function pigeon_clauses(m){
     var clauses = [];
     //Equation 97
@@ -213,7 +245,7 @@ var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
     //TODO: generalize this, so that multiple graph can be generated within the same page
-var graph = valid_resolutions_graph(unsatifiable90_92(m));
+var graph = cooccurrence_variables_graph(unsatifiable90_92(m));
 
 var force = d3.layout.force()
     .charge(-180)
