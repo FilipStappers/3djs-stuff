@@ -30,6 +30,7 @@ svg
     - Implement increased attraction of selected node
     - Implement SAT solver
     - Implement better popups for each node (# links, SAT algorithm info...)
+    - Better display of bipartite graphs (like factor graph)
 
     The code is largely based on the 3djs sample 'Force-Directed graphs'. 
     */
@@ -201,15 +202,35 @@ function cooccurrence_literals_graph(clauses) {
     
 	return {"nodes": nodes, "links": links};
 }
+function factor_graph(clauses) {
+    var nodeMap = [];
+	var nodes = [];
+    var links = [];
+    clauses.forEach(function(clause,index,array){
+        var source = {"name":printclause(clause),"group":"2"}; 
+        nodes.push(source);
+        nodeMap[printclause(clause)] = source;
+        for(var i=0;i<clause.length;i++){
+            var target;
+            if(!nodeMap[var_name(clause[i])]){ 
+                nodes.push(nodeMap[var_name(clause[i])] = clause[i])}
+            target = nodeMap[var_name(clause[i])];
+            links.push({"source": source, "target": target});
+        }   
+    });    
+    
+	return {"nodes": nodes, "links": links};
+}
+
 function complement(literal){
     return literal.name.indexOf("~") == 0 ? literal.name.substr(1) : "~" + literal.name;
 }
 function printclause(clause){
-    var result = "";
+    var result = "(";
     clause.forEach(function(literal, i, array){
         result += literal.name + " ";
     });
-    return result.substr(0, result.length -1);
+    return result.substr(0, result.length -1) + ")";
 }
 function valid_resolutions_graph(clauses){
     var nodeMap = [];
@@ -245,11 +266,11 @@ var m = getQuerystring('m', 5);
 var width = 1000,
     height = 1000;
     //TODO: generalize this, so that multiple graph can be generated within the same page
-var graph = cooccurrence_variables_graph(unsatifiable90_92(m));
+var graph = factor_graph(unsatifiable90_92_variation_666(m));
 
 var force = d3.layout.force()
     .charge(-180)
-    .linkDistance(130)
+    .linkDistance(200)
     .size([width, height]);
 
 var svg = d3.select("body").append("svg")
