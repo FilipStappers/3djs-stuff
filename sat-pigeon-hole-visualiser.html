@@ -60,7 +60,7 @@ function rivest(){
     clauses.push([{name:"~2"},{name:"~3"},{name:"4"}]);
     clauses.push([{name:"~3"},{name:"~4"},{name:"~1"}]);
     clauses.push([{name:"~4"},{name:"1"},{name:"~2"}]);
-    return clauses;
+    return {name: "Rivest", "clauses":clauses};
 }
 //Another graph to visualize: Knuth Pre-fascicle 6a, equations 90-92.
 function unsatifiable90_92(m){
@@ -91,7 +91,7 @@ function unsatifiable90_92(m){
         }
         clauses.push(clause);
     }
-    return clauses;
+    return {name: "Equations 90-92", "clauses":clauses};
 }
 //Knuth also defined a variation of these clauses in exercise 666; replacing clauses (91) with (91')
 function unsatifiable90_92_variation_666(m){
@@ -122,7 +122,7 @@ function unsatifiable90_92_variation_666(m){
         }
         clauses.push(clause);
     }
-    return clauses;
+    return {name: "Variation exercise 666", "clauses":clauses};
 }
 
 function pigeon_clauses(m){
@@ -146,7 +146,7 @@ function pigeon_clauses(m){
             }
         }
 	}
-    return clauses;
+return {name: "Pigeon clauses", "clauses":clauses};
 }
 function var_name(literal){
     if(literal.name.indexOf("~") == 0){
@@ -155,11 +155,11 @@ function var_name(literal){
     return literal.name;
 }
 
-function cooccurrence_variables_graph(clauses) {
+function cooccurrence_variables_graph(clauseInfo) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
-    clauses.forEach(function(element,index,array){
+    clauseInfo.clauses.forEach(function(element,index,array){
         for(var i=0;i<element.length;i++){
             for(var j=i+1; j<element.length;j++){
                 var source;
@@ -176,14 +176,14 @@ function cooccurrence_variables_graph(clauses) {
         }
     });    
     
-	return {"nodes": nodes, "links": links};
+	return {"name": clauseInfo.name + ": cooccuring variables","nodes": nodes, "links": links};
 }
 
-function cooccurrence_literals_graph(clauses) {
+function cooccurrence_literals_graph(clauseInfo) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
-    clauses.forEach(function(element,index,array){
+    clauseInfo.clauses.forEach(function(element,index,array){
         for(var i=0;i<element.length;i++){
             for(var j=i+1; j<element.length;j++){
                 var source;
@@ -200,13 +200,13 @@ function cooccurrence_literals_graph(clauses) {
         }
     });    
     
-	return {"nodes": nodes, "links": links};
+	return {"name": clauseInfo.name + ": cooccurring literals","nodes": nodes, "links": links};
 }
-function factor_graph(clauses) {
+function factor_graph(clauseInfo) {
     var nodeMap = [];
 	var nodes = [];
     var links = [];
-    clauses.forEach(function(clause,index,array){
+    clauseInfo.clauses.forEach(function(clause,index,array){
         var source = {"name":printclause(clause),"group":"2"}; 
         nodes.push(source);
         nodeMap[printclause(clause)] = source;
@@ -219,7 +219,7 @@ function factor_graph(clauses) {
         }   
     });    
     
-	return {"nodes": nodes, "links": links};
+	return {"name": clauseInfo.name + ": factor graph", "nodes": nodes, "links": links};
 }
 
 function complement(literal){
@@ -232,10 +232,11 @@ function printclause(clause){
     });
     return result.substr(0, result.length -1) + ")";
 }
-function valid_resolutions_graph(clauses){
+function valid_resolutions_graph(clauseInfo){
     var nodeMap = [];
     var nodes = [];
     var links = [];
+    var clauses = clauseInfo.clauses;
     //TODO: rewrite this with contains/filter etc...
     for(var i=0;i<clauses.length;i++){
         for(var j=i+1; j<clauses.length;j++){
@@ -260,63 +261,69 @@ function valid_resolutions_graph(clauses){
             });
         }
     }
-	return {"nodes": nodes, "links": links};
+	return {"name":clauseInfo.name + ": valid resolutions","nodes": nodes, "links": links};
 }
-var m = getQuerystring('m', 5);
-var width = 1000,
+function drawGraph(graph){
+    var width = 1000,
     height = 1000;
-    //TODO: generalize this, so that multiple graph can be generated within the same page
-var graph = factor_graph(unsatifiable90_92_variation_666(m));
 
-var force = d3.layout.force()
+    var force = d3.layout.force()
     .charge(-180)
     .linkDistance(200)
     .size([width, height]);
+    var graphName = d3.select("body").append("h1").text(graph.name);
 
-var svg = d3.select("body").append("svg")
+    var svg = d3.select("body").append("div").attr("margin", 10).append("svg")
     .attr("width", width)
     .attr("height", height);
 
-  force
-      .nodes(graph.nodes)
-      .links(graph.links)
-      .start();
+    force
+    .nodes(graph.nodes)
+    .links(graph.links)
+    .start();
 
-  var link = svg.selectAll(".link")
-      .data(graph.links)
+    var link = svg.selectAll(".link")
+    .data(graph.links)
     .enter().append("line")
-      .attr("class", "link")
-      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+    .attr("class", "link")
+    .style("stroke-width", function(d) { return Math.sqrt(d.value); });
 
-  var node = svg.selectAll(".node")
-      .data(graph.nodes)
+    var node = svg.selectAll(".node")
+    .data(graph.nodes)
     .enter().append("g")
-      .attr("class", "node")
-      .call(force.drag);
+    .attr("class", "node")
+    .call(force.drag);
 
-node.append("circle")
-      .attr("r", 5)
-      .style("fill", function(d) { return color(d.group); });
-node.append("text")
-				.attr("text-anchor", "middle") 
-				.style("pointer-events", "none")
-				.attr("font-size", "9px")
-				.attr("font-family", "helvetica,arial")
-				.attr("font-weight", "100")
-                .text( function(d) { return d.name;} ); 
+    node.append("circle")
+    .attr("r", 5)
+    .style("fill", function(d) { return color(d.group); });
+    node.append("text")
+    .attr("text-anchor", "middle") 
+    .style("pointer-events", "none")
+    .attr("font-size", "9px")
+    .attr("font-family", "helvetica,arial")
+    .attr("font-weight", "100")
+    .text( function(d) { return d.name;} ); 
 
-  node.append("title")
-      .text(function(d) { return d.name; });
-  force.on("tick", function() {
-    link.attr("x1", function(d) { return d.source.x; })
+    node.append("title")
+    .text(function(d) { return d.name; });
+    force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node.attr("cx", function(d) { return d.x; })
+        node.attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; })
         .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")";});
-  });
+    });
+}
 
+var m = getQuerystring('m', 5);
+var clauses = unsatifiable90_92(m);
+drawGraph(factor_graph(clauses));
+drawGraph(cooccurrence_literals_graph(clauses));
+drawGraph(cooccurrence_variables_graph(clauses));
+drawGraph(valid_resolutions_graph(clauses));
 </script>
 
