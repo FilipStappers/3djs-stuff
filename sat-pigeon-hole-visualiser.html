@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <style>
 
-.node {
+.node circle {
   stroke: #fff;
   stroke-width: 1.5px;
 }
@@ -11,9 +11,10 @@
   stroke: #999;
   stroke-opacity: .6;
 }
-svg
-{
-	background: darkgreen;
+text {
+  font: 8px sans-serif;
+  pointer-events: none;
+  color: rgba(0, 0, 0, 0.5);
 }
 
 </style>
@@ -38,11 +39,11 @@ svg
 var color = d3.scale.category20();
 function getQuerystring(key, default_)
 {
-  if (default_==null) default_=""; 
+  if (default_===null) default_=""; 
   key = key.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
   var regex = new RegExp("[\\?&]"+key+"=([^&#]*)");
   var qs = regex.exec(window.location.href);
-  if(qs == null)
+  if(qs === null)
     return default_;
   else
     return qs[1];
@@ -149,7 +150,7 @@ function pigeon_clauses(m){
 return {name: "Pigeon clauses", "clauses":clauses};
 }
 function var_name(literal){
-    if(literal.name.indexOf("~") == 0){
+    if(literal.name.indexOf("~") === 0){
         return literal.name.substr(1);
     }
     return literal.name;
@@ -223,7 +224,17 @@ function factor_graph(clauseInfo) {
 }
 
 function complement(literal){
-    return literal.name.indexOf("~") == 0 ? literal.name.substr(1) : "~" + literal.name;
+    return literal.name.indexOf("~") === 0 ? literal.name.substr(1) : "~" + literal.name;
+}
+function isTautological(clause){
+    for(var i=0;i<clause.length;i++){
+        for(var j=i+1;j<clause.length;j++){
+            if(clause[i].name === complement(clause[j])){
+                return true;
+            }
+        }
+    }
+    return false;
 }
 function printclause(clause){
     var result = "(";
@@ -237,28 +248,35 @@ function valid_resolutions_graph(clauseInfo){
     var nodes = [];
     var links = [];
     var clauses = clauseInfo.clauses;
-    //TODO: rewrite this with contains/filter etc...
     for(var i=0;i<clauses.length;i++){
+        if(isTautological(clauses[i])) continue;
         for(var j=i+1; j<clauses.length;j++){
-            //Check if a resolution is possible by comparing all variables, until a match is found
+            if(isTautological(clauses[j])) continue;
+            //Check if a resolution is possible by comparing all variables and checking if they differ in exactly one literal
+            var nrOfComplements = 0;
             clauses[i].forEach(function(literal, index, array){
                 var complemented = complement(literal);
                 for(var k=0;k<clauses[j].length; k++){
-                    if(clauses[j][k].name == complemented){
-                        var source;
-                        if(!nodeMap[printclause(clauses[i])]){ 
-                            nodes.push(nodeMap[printclause(clauses[i])] = {name: printclause(clauses[i])})}
-                        source = nodeMap[printclause(clauses[i])];
-
-                        var target;
-                        if(!nodeMap[printclause(clauses[j])]){ 
-                            nodes.push(nodeMap[printclause(clauses[j])] = {name: printclause(clauses[j])})}
-                        target = nodeMap[printclause(clauses[j])];
-                        links.push({"source": source, "target": target});
-                        break;
+                    if(clauses[j][k].name === complemented){
+                        nrOfComplements++; 
+                        if(nrOfComplements > 1){
+                            break;
+                        }
                     }
                 }
             });
+            if(nrOfComplements === 1){
+                var source;
+                if(!nodeMap[printclause(clauses[i])]){ 
+                    nodes.push(nodeMap[printclause(clauses[i])] = {name: printclause(clauses[i])})}
+                source = nodeMap[printclause(clauses[i])];
+
+                var target;
+                if(!nodeMap[printclause(clauses[j])]){ 
+                    nodes.push(nodeMap[printclause(clauses[j])] = {name: printclause(clauses[j])})}
+                target = nodeMap[printclause(clauses[j])];
+                links.push({"source": source, "target": target});
+            }
         }
     }
 	return {"name":clauseInfo.name + ": valid resolutions","nodes": nodes, "links": links};
@@ -269,7 +287,7 @@ function drawGraph(graph){
 
     var force = d3.layout.force()
     .charge(-180)
-    .linkDistance(200)
+    .linkDistance(300)
     .size([width, height]);
     var graphName = d3.select("body").append("h1").text(graph.name);
 
@@ -299,10 +317,6 @@ function drawGraph(graph){
     .style("fill", function(d) { return color(d.group); });
     node.append("text")
     .attr("text-anchor", "middle") 
-    .style("pointer-events", "none")
-    .attr("font-size", "9px")
-    .attr("font-family", "helvetica,arial")
-    .attr("font-weight", "100")
     .text( function(d) { return d.name;} ); 
 
     node.append("title")
@@ -320,10 +334,10 @@ function drawGraph(graph){
 }
 
 var m = getQuerystring('m', 5);
-var clauses = unsatifiable90_92(m);
+var clauses = unsatifiable90_92_variation_666(m);
+drawGraph(valid_resolutions_graph(clauses));
 drawGraph(factor_graph(clauses));
 drawGraph(cooccurrence_literals_graph(clauses));
 drawGraph(cooccurrence_variables_graph(clauses));
-drawGraph(valid_resolutions_graph(clauses));
 </script>
 
